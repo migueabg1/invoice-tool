@@ -23,6 +23,7 @@
             border-radius: 8px;
             margin: 20px 0;
             transition: border-color 0.3s;
+            cursor: pointer;
         }
         .upload-area:hover {
             border-color: #3182ce;
@@ -39,6 +40,7 @@
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             font-size: 14px;
+            box-sizing: border-box;
         }
         button { 
             background: #4299e1; 
@@ -98,6 +100,42 @@
             color: #718096;
             margin-top: 5px;
         }
+        .remember-keys {
+            margin: 15px 0;
+            padding: 10px;
+            background: #e6fffa;
+            border-radius: 6px;
+            border: 1px solid #38b2ac;
+        }
+        .remember-keys label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 500;
+            color: #2d3748;
+        }
+        .remember-keys input[type="checkbox"] {
+            margin-right: 8px;
+            width: auto;
+        }
+        .key-status {
+            font-size: 12px;
+            color: #38a169;
+            margin-top: 5px;
+        }
+        .clear-keys {
+            background: #f56565;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .clear-keys:hover {
+            background: #e53e3e;
+        }
     </style>
 </head>
 <body>
@@ -105,21 +143,34 @@
         <h1>📷 Booking Screenshot → 💳 Stripe Invoice</h1>
         <p>Upload your Booking.com screenshot and automatically create a Stripe invoice!</p>
         
-        <div class="upload-area">
+        <div class="upload-area" onclick="document.getElementById('screenshot').click()">
             <p>🎯 Drop your Booking.com screenshot here or click to browse</p>
-            <input type="file" id="screenshot" accept="image/*">
+            <input type="file" id="screenshot" accept="image/*" style="display: none;">
             <div class="help-text">Supported formats: JPG, PNG, WebP</div>
         </div>
-        
+
         <div class="api-keys">
             <h3>🔑 API Keys</h3>
             <div>
                 <input type="password" id="stripeKey" placeholder="Stripe Secret Key (sk_test_... or sk_live_...)">
                 <div class="help-text">Get from: stripe.com/dashboard/apikeys</div>
+                <div id="stripeStatus" class="key-status" style="display: none;">✅ Stripe key saved in browser</div>
             </div>
             <div>
                 <input type="password" id="claudeKey" placeholder="Claude API Key">
                 <div class="help-text">Get from: console.anthropic.com → API Keys</div>
+                <div id="claudeStatus" class="key-status" style="display: none;">✅ Claude key saved in browser</div>
+            </div>
+            
+            <div class="remember-keys">
+                <label>
+                    <input type="checkbox" id="rememberKeys">
+                    💾 Remember my API keys on this browser
+                </label>
+                <div class="help-text">
+                    Keys are stored securely in your browser only. Never shared or uploaded.
+                    <button class="clear-keys" onclick="clearSavedKeys()" style="display: none;" id="clearKeysBtn">Clear Saved Keys</button>
+                </div>
             </div>
         </div>
         
@@ -129,12 +180,69 @@
     </div>
 
     <script>
+        // Load saved keys on page load
+        window.onload = function() {
+            loadSavedKeys();
+        };
+
+        function loadSavedKeys() {
+            const savedStripeKey = localStorage.getItem('invoice_tool_stripe_key');
+            const savedClaudeKey = localStorage.getItem('invoice_tool_claude_key');
+            
+            if (savedStripeKey) {
+                document.getElementById('stripeKey').value = savedStripeKey;
+                document.getElementById('stripeStatus').style.display = 'block';
+                document.getElementById('rememberKeys').checked = true;
+                document.getElementById('clearKeysBtn').style.display = 'inline';
+            }
+            
+            if (savedClaudeKey) {
+                document.getElementById('claudeKey').value = savedClaudeKey;
+                document.getElementById('claudeStatus').style.display = 'block';
+                document.getElementById('rememberKeys').checked = true;
+                document.getElementById('clearKeysBtn').style.display = 'inline';
+            }
+        }
+
+        function saveKeys() {
+            const rememberKeys = document.getElementById('rememberKeys').checked;
+            const stripeKey = document.getElementById('stripeKey').value;
+            const claudeKey = document.getElementById('claudeKey').value;
+            
+            if (rememberKeys) {
+                if (stripeKey) {
+                    localStorage.setItem('invoice_tool_stripe_key', stripeKey);
+                    document.getElementById('stripeStatus').style.display = 'block';
+                }
+                if (claudeKey) {
+                    localStorage.setItem('invoice_tool_claude_key', claudeKey);
+                    document.getElementById('claudeStatus').style.display = 'block';
+                }
+                document.getElementById('clearKeysBtn').style.display = 'inline';
+            }
+        }
+
+        function clearSavedKeys() {
+            localStorage.removeItem('invoice_tool_stripe_key');
+            localStorage.removeItem('invoice_tool_claude_key');
+            document.getElementById('stripeKey').value = '';
+            document.getElementById('claudeKey').value = '';
+            document.getElementById('stripeStatus').style.display = 'none';
+            document.getElementById('claudeStatus').style.display = 'none';
+            document.getElementById('rememberKeys').checked = false;
+            document.getElementById('clearKeysBtn').style.display = 'none';
+            alert('🗑️ Saved keys cleared!');
+        }
+
         async function processInvoice() {
             const screenshot = document.getElementById('screenshot').files[0];
             const stripeKey = document.getElementById('stripeKey').value;
             const claudeKey = document.getElementById('claudeKey').value;
             const resultDiv = document.getElementById('result');
             const processBtn = document.getElementById('processBtn');
+            
+            // Save keys if remember is checked
+            saveKeys();
             
             // Validation
             if (!screenshot) {
@@ -371,10 +479,6 @@
             if (files.length > 0) {
                 fileInput.files = files;
             }
-        });
-
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
         });
     </script>
 </body>
